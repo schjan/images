@@ -1,0 +1,133 @@
+name: CI images
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 5 * * 2'
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: Rebuild all layers to refresh OS packages and the .NET SDK
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Serialize main publications: the architecture staging tags must not race.
+# Superseded PR checks can be cancelled without touching registry tags.
+concurrency:
+  group: images-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOCKER_BUILD_RECORD_RETENTION_DAYS: '7'
+
+jobs:
+  build:
+    name: Build and test (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      PLATFORMS: linux/${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      - name: Configure image names and save the Bake plan
+        run: |
+          export IMAGE_PREFIX="ghcr.io/${GITHUB_REPOSITORY,,}/ci"
+          echo "IMAGE_PREFIX=$IMAGE_PREFIX" >> "$GITHUB_ENV"
+          mkdir -p ci-metadata
+          docker buildx bake --print > ci-metadata/plan.json
+      - name: Check publication helpers
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Bake and load native images
+        uses: docker/bake-action@v7
+        with:
+          source: .
+          load: true
+          pull: true
+          no-cache: ${{ github.event_name == 'schedule' || inputs.refresh == true }}
+          set: |
+            base.cache-from=type=gha,scope=base-${{ matrix.arch }}
+            base.cache-to=type=gha,scope=base-${{ matrix.arch }},mode=max
+            rust.cache-from=type=gha,scope=rust-${{ matrix.arch }}
+            rust.cache-to=type=gha,scope=rust-${{ matrix.arch }},mode=max
+            dotnet.cache-from=type=gha,scope=dotnet-${{ matrix.arch }}
+            dotnet.cache-to=type=gha,scope=dotnet-${{ matrix.arch }},mode=max
+            *.labels.org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            *.labels.org.opencontainers.image.revision=${{ github.sha }}
+      - name: Smoke-test the loaded images
+        run: bash scripts/test-images.sh ci-metadata/plan.json
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push tested architecture images and record digests
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          python3 scripts/publish.py stage \
+            --plan ci-metadata/plan.json --directory ci-metadata \
+            --arch '${{ matrix.arch }}' --revision "$GITHUB_SHA"
+      - name: Upload digest records
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-digests-${{ matrix.arch }}
+          path: ci-metadata/digests-${{ matrix.arch }}.json
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+  publish:
+    name: Publish multi-architecture manifests
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PLATFORMS: linux/amd64,linux/arm64
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: image-digests-*
+          merge-multiple: true
+          path: ci-metadata
+      - name: Assemble manifests from the tested digests
+        run: |
+          export IMAGE_PREFIX="ghcr.io/${GITHUB_REPOSITORY,,}/ci"
+          docker buildx bake --print > ci-metadata/plan.json
+          python3 scripts/publish.py merge \
+            --plan ci-metadata/plan.json --directory ci-metadata \
+            --revision "$GITHUB_SHA" \
+            --build-tag "build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"

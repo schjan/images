@@ -1,0 +1,7 @@
+**
+!base/
+!base/Dockerfile
+!rust/
+!rust/Dockerfile
+!dotnet/
+!dotnet/Dockerfile
