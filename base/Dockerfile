@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 ARG NODE_IMAGE=docker.io/library/node:24-trixie
-ARG DOCKER_IMAGE=docker.io/library/docker:29.9.0-cli
+ARG DOCKER_IMAGE=docker.io/library/docker:29.9.1-cli
 
 FROM ${DOCKER_IMAGE} AS docker-cli
 FROM ${NODE_IMAGE}
