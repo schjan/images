@@ -11,7 +11,7 @@ variable "DOCKER_IMAGE" {
 }
 
 variable "RUST_VERSION" {
-  default = "1.99.0"
+  default = "1.99.1"
 }
 
 variable "DOTNET_SDK_PACKAGE_VERSION" {

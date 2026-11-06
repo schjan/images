@@ -2,5 +2,26 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker-bake\\.hcl$/",
+        "/^rust\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "variable\\s+\"RUST_VERSION\"\\s*\\{\\s*default\\s*=\\s*\"(?<currentValue>\\d+\\.\\d+\\.\\d+)\"",
+        "ARG RUST_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "rust",
+      "datasourceTemplate": "rust-version"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": ["rust-version"],
+      "groupName": "Rust toolchain"
+    }
   ]
 }

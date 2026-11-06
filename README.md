@@ -8,7 +8,7 @@ client tools and no daemon, host socket, credentials, or infrastructure settings
 | Target | Default local tag | Adds |
 | --- | --- | --- |
 | `base` | `ci-base:node24-trixie` | Node/npm, Bash, Git, curl, CA certificates, jq, tar/gzip/xz/zstd, zip/unzip, Docker CLI and Buildx/Compose plugins |
-| `rust` | `ci-rust:1.99.0-trixie` | Rust 1.99.0, rustfmt, Clippy, C/C++ build tools, CMake, pkg-config |
+| `rust` | `ci-rust:1.99.1-trixie` | Rust 1.99.1, rustfmt, Clippy, C/C++ build tools, CMake, pkg-config |
 | `dotnet` | `ci-dotnet:10.0-trixie` | Stable .NET 10 SDK and native dependencies from Microsoft's Debian 13 APT feed |
 
 The shared foundation is the official `node:24-trixie` image, which already
@@ -39,6 +39,8 @@ needed inside the smoke-test containers. Workspaces and test files are temporary
 Validated locally on Linux ARM64 on 2026-10-15: all three images built and passed
 these smoke tests (Rust 1.99.0 and .NET SDK 10.0.402). The amd64/multi-architecture
 Bake plan was checked, but amd64 builds and registry publication have not run.
+The Rust 1.99.1 image was also built and smoke-tested locally on Linux ARM64 on
+2026-11-06; cross-architecture checks and publication run in GitHub Actions.
 
 Bake connects language targets directly to the base build. It does not need an
 already-published base image, and builds the shared layers once. For standalone
@@ -46,7 +48,7 @@ Docker builds instead:
 
 ```sh
 docker build -f base/Dockerfile -t ci-base:node24-trixie .
-docker build -f rust/Dockerfile -t ci-rust:1.99.0-trixie .
+docker build -f rust/Dockerfile -t ci-rust:1.99.1-trixie .
 docker build -f dotnet/Dockerfile -t ci-dotnet:10.0-trixie .
 ```
 
@@ -56,6 +58,13 @@ The defaults live in `docker-bake.hcl`. Environment variables override them:
 `NODE_IMAGE`, `DOCKER_IMAGE`, `RUST_VERSION`, `DOTNET_SDK_PACKAGE_VERSION`,
 `IMAGE_PREFIX`, and `PLATFORMS`. The Dockerfile defaults also support standalone
 builds; keep them aligned if editing the prototype's defaults.
+
+Renovate tracks stable Rust releases from the official Rust distribution service
+using its `rust-version` datasource. A custom regex manager covers both
+`RUST_VERSION` in `docker-bake.hcl` and the standalone `ARG RUST_VERSION` in
+`rust/Dockerfile`, grouped into one Rust toolchain PR. The Dockerfile manager
+alone only detects image references, not toolchains installed through rustup.
+Regression tests check that both pins remain tracked and agree.
 
 .NET follows stable 10.0 SDK packages by default. For an exact SDK build, set
 `DOTNET_SDK_PACKAGE_VERSION` to the complete version reported by
@@ -68,7 +77,7 @@ Rebuild with `--pull` for upstream OS/security updates, and rebuild language
 images whenever the shared base changes. Example:
 
 ```sh
-RUST_VERSION=1.99.0 bash scripts/check.sh --pull
+RUST_VERSION=1.99.1 bash scripts/check.sh --pull
 ```
 
 Rust puts tools under `/usr/local/cargo` and `/usr/local/rustup`, adds Cargo's
@@ -99,7 +108,7 @@ name. For an `example/images` repository, the published version tags are:
 
 ```text
 ghcr.io/example/images/ci-base:node24-trixie
-ghcr.io/example/images/ci-rust:1.99.0-trixie
+ghcr.io/example/images/ci-rust:1.99.1-trixie
 ghcr.io/example/images/ci-dotnet:10.0-trixie
 ```
 

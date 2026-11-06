@@ -3,7 +3,7 @@
 ARG CI_BASE_IMAGE=ci-base:node24-trixie
 FROM ${CI_BASE_IMAGE}
 
-ARG RUST_VERSION=1.99.0
+ARG RUST_VERSION=1.99.1
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     CARGO_INCREMENTAL=0 \
