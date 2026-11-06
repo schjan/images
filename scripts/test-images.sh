@@ -3,17 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 plan=${1:?Expected a Bake --print JSON file}
-rows=$(python3 - "$plan" <<'PLAN'
-import json, sys
-with open(sys.argv[1]) as stream:
-    plan = json.load(stream)
-selected = plan['group']['default']['targets']
-assert selected and all(kind in ('base', 'rust', 'dotnet') for kind in selected)
-for kind in selected:
-    print(kind + '\t' + plan['target'][kind]['tags'][0])
-PLAN
-)
-while IFS=$'\t' read -r kind image; do
+rows=$(python3 scripts/smoke_plan.py "$plan")
+while IFS=$'\t' read -r kind image node_major expected docker_version; do
     echo "Testing $kind image: $image"
-    docker run --rm -i "$image" bash -s -- "$kind" < tests/smoke.sh
+    docker run --rm -i "$image" bash -s -- "$kind" "$node_major" "$expected" "$docker_version" < tests/smoke.sh
 done <<< "$rows"

@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 # Bake substitutes its base target; standalone builds can pass a published ref.
-ARG CI_BASE_IMAGE=ci-base:node24-trixie
+ARG CI_BASE_IMAGE=ci-base:node-trixie
 FROM ${CI_BASE_IMAGE}
 
-ARG RUST_VERSION=1.99.0
+ARG RUST_VERSION=1.99.1
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     CARGO_INCREMENTAL=0 \

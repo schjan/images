@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh:
-        description: Rebuild all layers to refresh OS packages and the .NET SDK
+        description: Rebuild all layers to refresh OS packages and upstream images
         type: boolean
         default: false
 

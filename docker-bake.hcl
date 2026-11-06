@@ -3,19 +3,19 @@ variable "IMAGE_PREFIX" {
 }
 
 variable "NODE_IMAGE" {
-  default = "docker.io/library/node:24-trixie"
+  default = "docker.io/library/node:26-trixie"
 }
 
 variable "DOCKER_IMAGE" {
-  default = "docker.io/library/docker:29.9.0-cli"
+  default = "docker.io/library/docker:29.9.3-cli"
 }
 
 variable "RUST_VERSION" {
-  default = "1.99.0"
+  default = "1.99.1"
 }
 
 variable "DOTNET_SDK_PACKAGE_VERSION" {
-  default = ""
+  default = "10.0.403-1"
 }
 
 # One architecture at a time for local --load; override when publishing.
@@ -33,10 +33,20 @@ target "_common" {
   platforms = PLATFORMS
 }
 
+# Only the final path component can contain a tag; earlier colons may be
+# registry ports (or IPv6). Digest-only references have no version tag.
+function "image_tag" {
+  params = [reference]
+  result = length(split(":", basename(split("@", reference)[0]))) == 2 ? split(":", basename(split("@", reference)[0]))[1] : ""
+}
+
 target "base" {
   inherits  = ["_common"]
   dockerfile = "base/Dockerfile"
-  tags       = ["${IMAGE_PREFIX}-base:node24-trixie"]
+  tags       = distinct([
+    "${IMAGE_PREFIX}-base:node${image_tag(NODE_IMAGE) == "" ? "-trixie" : image_tag(NODE_IMAGE)}",
+    "${IMAGE_PREFIX}-base:node-trixie",
+  ])
   args = {
     NODE_IMAGE   = NODE_IMAGE
     DOCKER_IMAGE = DOCKER_IMAGE
@@ -46,7 +56,10 @@ target "base" {
 target "rust" {
   inherits   = ["_common"]
   dockerfile = "rust/Dockerfile"
-  tags       = ["${IMAGE_PREFIX}-rust:${RUST_VERSION}-trixie"]
+  tags       = [
+    "${IMAGE_PREFIX}-rust:${RUST_VERSION}-trixie",
+    "${IMAGE_PREFIX}-rust:${split(".", RUST_VERSION)[0]}-trixie",
+  ]
   contexts = {
     ci-base = "target:base"
   }
@@ -59,7 +72,11 @@ target "rust" {
 target "dotnet" {
   inherits   = ["_common"]
   dockerfile = "dotnet/Dockerfile"
-  tags       = ["${IMAGE_PREFIX}-dotnet:10.0-trixie"]
+  tags       = [
+    "${IMAGE_PREFIX}-dotnet:${split("-", DOTNET_SDK_PACKAGE_VERSION)[0]}-trixie",
+    "${IMAGE_PREFIX}-dotnet:10.0-trixie",
+    "${IMAGE_PREFIX}-dotnet:10-trixie",
+  ]
   contexts = {
     ci-base = "target:base"
   }
