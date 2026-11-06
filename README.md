@@ -54,10 +54,30 @@ these updates.
 
 Environment variables override the Bake defaults: `NODE_IMAGE`, `DOCKER_IMAGE`,
 `RUST_VERSION`, `DOTNET_SDK_PACKAGE_VERSION`, `IMAGE_PREFIX`, and `PLATFORMS`.
-Node/Docker references can include digests. Rust uses an explicit toolchain;
-the rustup bootstrap installer follows upstream. The SDK package is pinned, but
-APT still resolves its runtime/native dependencies. This is not a fully locked
-build.
+Node/Docker references can include registry ports and digests. Tags are parsed
+from the final path component after stripping any digest, so registry ports
+never become version numbers. A tagged digest such as `node:26-trixie@sha256:…`
+still supplies its smoke-test version automatically.
+
+Digest-only references and non-versioned tags have no inferable tool version.
+Set `NODE_MAJOR` and/or `DOCKER_VERSION` explicitly for the corresponding
+smoke-test expectation, including when testing a previously saved Bake plan:
+
+```sh
+NODE_IMAGE='registry.example:5000/library/node@sha256:<node-digest>' \
+DOCKER_IMAGE='registry.example:5000/library/docker@sha256:<docker-digest>' \
+NODE_MAJOR=26 DOCKER_VERSION=29.9.3 bash scripts/check.sh
+```
+
+These expectations are checked against the installed tools, not used to select
+image versions. Missing or invalid expectations fail with an actionable error
+before running test containers. An untagged/digest-only Node override publishes
+only the `node-trixie` base tag (plus its build tag/digest), not a fabricated
+Node version tag.
+
+Rust uses an explicit toolchain; the rustup bootstrap installer follows upstream.
+The SDK package is pinned, but APT still resolves its runtime/native dependencies.
+This is not a fully locked build.
 
 ## Build and check
 

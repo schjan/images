@@ -33,13 +33,20 @@ target "_common" {
   platforms = PLATFORMS
 }
 
+# Only the final path component can contain a tag; earlier colons may be
+# registry ports (or IPv6). Digest-only references have no version tag.
+function "image_tag" {
+  params = [reference]
+  result = length(split(":", basename(split("@", reference)[0]))) == 2 ? split(":", basename(split("@", reference)[0]))[1] : ""
+}
+
 target "base" {
   inherits  = ["_common"]
   dockerfile = "base/Dockerfile"
-  tags       = [
-    "${IMAGE_PREFIX}-base:node${split("@", split(":", NODE_IMAGE)[1])[0]}",
+  tags       = distinct([
+    "${IMAGE_PREFIX}-base:node${image_tag(NODE_IMAGE) == "" ? "-trixie" : image_tag(NODE_IMAGE)}",
     "${IMAGE_PREFIX}-base:node-trixie",
-  ]
+  ])
   args = {
     NODE_IMAGE   = NODE_IMAGE
     DOCKER_IMAGE = DOCKER_IMAGE
