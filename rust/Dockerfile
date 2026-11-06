@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Bake substitutes its base target; standalone builds can pass a published ref.
-ARG CI_BASE_IMAGE=ci-base:node24-trixie
+ARG CI_BASE_IMAGE=ci-base:node-trixie
 FROM ${CI_BASE_IMAGE}
 
 ARG RUST_VERSION=1.99.1

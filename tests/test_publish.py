@@ -18,8 +18,14 @@ class Publication(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
         self.revision = 'a' * 40
-        self.plan = {'target': {kind: {'tags': [f'ghcr.io/example/images/ci-{kind}:version']}
-                                for kind in publish.TARGETS}}
+        versions = {
+            'base': ['node26-trixie', 'node-trixie'],
+            'rust': ['1.99.1-trixie', '1-trixie'],
+            'dotnet': ['10.0.403-trixie', '10.0-trixie', '10-trixie'],
+        }
+        self.plan = {'target': {
+            kind: {'tags': [f'ghcr.io/example/images/ci-{kind}:{tag}' for tag in tags]}
+            for kind, tags in versions.items()}}
         self.tags = publish.image_tags(self.plan)
         for index, arch in enumerate(publish.ARCHITECTURES, start=1):
             record = {'architecture': arch, 'revision': self.revision, 'images': {
@@ -87,13 +93,44 @@ class Publication(unittest.TestCase):
         summary = self.directory / 'summary.md'
         with patch.dict('os.environ', {'GITHUB_STEP_SUMMARY': str(summary)}):
             self.merge()
-        self.assertEqual(docker.call_count, 3)
-        for call, (kind, tag) in zip(docker.call_args_list, self.tags.items()):
+        self.assertEqual(docker.call_count, 6)
+        for index, (kind, tag) in enumerate(self.tags.items()):
             repository = tag.rsplit(':', 1)[0]
-            self.assertEqual(call.args, ('buildx', 'imagetools', 'create', '--tag', tag,
+            build_call, tags_call = docker.call_args_list[index * 2:index * 2 + 2]
+            self.assertEqual(build_call.args, ('buildx', 'imagetools', 'create',
                 '--tag', repository + ':build-123-1', repository + '@sha256:' + '1' * 64,
                 repository + '@sha256:' + '2' * 64))
+            expected_tags = [arg for name in self.plan['target'][kind]['tags']
+                             for arg in ('--tag', name)]
+            self.assertEqual(tags_call.args, ('buildx', 'imagetools', 'create',
+                *expected_tags, repository + '@sha256:' + '4' * 64))
+            for name in self.plan['target'][kind]['tags']:
+                self.assertIn(name, summary.read_text())
             self.assertIn(repository + '@sha256:' + '4' * 64, summary.read_text())
+
+    @patch.object(publish, 'docker_json')
+    @patch.object(publish, 'docker')
+    def test_wrong_manifest_platforms_never_advance_moving_tags(self, docker, inspect):
+        inspect.return_value = {'digest': 'sha256:' + '4' * 64, 'manifests': [
+            {'platform': {'os': 'linux', 'architecture': 'amd64'}}]}
+        with self.assertRaises(ValueError):
+            self.merge()
+        self.assertEqual(docker.call_count, 1)
+        self.assertIn(':build-123-1', docker.call_args.args[4])
+
+    @patch.object(publish, 'docker')
+    def test_aliases_in_other_repositories_are_refused_before_any_write(self, docker):
+        self.plan['target']['rust']['tags'].append('ghcr.io/other/image:1-trixie')
+        with self.assertRaises(ValueError):
+            self.merge()
+        docker.assert_not_called()
+
+    @patch.object(publish, 'docker')
+    def test_duplicate_tags_are_refused_before_any_write(self, docker):
+        self.plan['target']['rust']['tags'].append(self.tags['rust'])
+        with self.assertRaises(ValueError):
+            self.merge()
+        docker.assert_not_called()
 
     @patch.object(publish, 'docker')
     def test_unqualified_tags_are_refused(self, docker):

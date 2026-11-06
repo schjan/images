@@ -16,12 +16,44 @@
       ],
       "depNameTemplate": "rust",
       "datasourceTemplate": "rust-version"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker-bake\\.hcl$/",
+        "/^dotnet\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "variable\\s+\"DOTNET_SDK_PACKAGE_VERSION\"\\s*\\{\\s*default\\s*=\\s*\"(?<currentValue>10\\.0\\.\\d+(?:-\\d+)?)\"",
+        "ARG DOTNET_SDK_PACKAGE_VERSION=\"(?<currentValue>10\\.0\\.\\d+(?:-\\d+)?)\""
+      ],
+      "depNameTemplate": "dotnet-sdk-10.0",
+      "datasourceTemplate": "deb",
+      "registryUrlTemplate": "https://packages.microsoft.com/debian/13/prod?suite=trixie&components=main&binaryArch=amd64"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^docker-bake\\.hcl$/"],
+      "matchStrings": [
+        "variable\\s+\"(?:NODE|DOCKER)_IMAGE\"\\s*\\{\\s*default\\s*=\\s*\"(?<depName>docker\\.io/library/(?:node|docker)):(?<currentValue>[^\"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\""
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
     {
       "matchDatasources": ["rust-version"],
       "groupName": "Rust toolchain"
+    },
+    {
+      "matchDatasources": ["deb"],
+      "matchPackageNames": ["dotnet-sdk-10.0"],
+      "groupName": ".NET 10 SDK"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ci-base"],
+      "enabled": false
     }
   ]
 }

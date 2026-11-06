@@ -1,10 +1,9 @@
 # syntax=docker/dockerfile:1
-ARG CI_BASE_IMAGE=ci-base:node24-trixie
+ARG CI_BASE_IMAGE=ci-base:node-trixie
 FROM ${CI_BASE_IMAGE}
 
-# Empty selects the current stable .NET 10 SDK from Microsoft's Debian feed.
-# Set to the exact APT package version when reproducible SDK pinning is needed.
-ARG DOTNET_SDK_PACKAGE_VERSION=""
+# Renovate tracks this exact .NET 10 SDK package in Microsoft's Debian feed.
+ARG DOTNET_SDK_PACKAGE_VERSION="10.0.403-1"
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     DOTNET_NOLOGO=1 \
     DOTNET_GENERATE_ASPNET_CERTIFICATE=false \
@@ -19,7 +18,7 @@ RUN curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
     && rm /tmp/packages-microsoft-prod.deb \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       "dotnet-sdk-10.0${DOTNET_SDK_PACKAGE_VERSION:+=$DOTNET_SDK_PACKAGE_VERSION}" \
+       "dotnet-sdk-10.0=${DOTNET_SDK_PACKAGE_VERSION}" \
     && rm -rf /var/lib/apt/lists/* \
     && dotnet --info \
     && dotnet --list-sdks | grep -E '^10\.'
