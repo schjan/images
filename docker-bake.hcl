@@ -15,7 +15,7 @@ variable "RUST_VERSION" {
 }
 
 variable "DOTNET_SDK_PACKAGE_VERSION" {
-  default = "10.0.403-1"
+  default = "10.0.404-1"
 }
 
 # One architecture at a time for local --load; override when publishing.
