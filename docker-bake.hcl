@@ -7,7 +7,7 @@ variable "NODE_IMAGE" {
 }
 
 variable "DOCKER_IMAGE" {
-  default = "docker.io/library/docker:29.9.3-cli"
+  default = "docker.io/library/docker:29.10.0-cli"
 }
 
 variable "RUST_VERSION" {
