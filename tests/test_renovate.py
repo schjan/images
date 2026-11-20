@@ -48,6 +48,10 @@ class RenovatePins(unittest.TestCase):
         self.assert_pins('rust-version', 'rust',
                          ('docker-bake.hcl', 'rust/Dockerfile'), '1.100.0')
 
+    def test_mise_pins_are_tracked_and_remain_updatable(self):
+        self.assert_pins('github-releases', 'jdx/mise',
+                         ('docker-bake.hcl', 'rust/Dockerfile'), '2026.12.1')
+
     def test_dotnet_pins_are_tracked_and_remain_updatable(self):
         self.assert_pins('deb', 'dotnet-sdk-10.0',
                          ('docker-bake.hcl', 'dotnet/Dockerfile'), '10.0.404-1')
