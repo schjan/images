@@ -32,6 +32,7 @@ case "$kind" in
         test "$(rustc --version | cut -d ' ' -f 2)" = "$toolchain"
         cmake --version
         pkg-config --version
+        mise --version
         cargo new --quiet --vcs none /tmp/rust-smoke
         cd /tmp/rust-smoke
         cargo fmt --check

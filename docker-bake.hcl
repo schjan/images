@@ -14,6 +14,10 @@ variable "RUST_VERSION" {
   default = "1.100.0"
 }
 
+variable "MISE_VERSION" {
+  default = "2026.11.10"
+}
+
 variable "DOTNET_SDK_PACKAGE_VERSION" {
   default = "10.0.404-1"
 }
@@ -66,6 +70,7 @@ target "rust" {
   args = {
     CI_BASE_IMAGE = "ci-base"
     RUST_VERSION  = RUST_VERSION
+    MISE_VERSION  = MISE_VERSION
   }
 }
 

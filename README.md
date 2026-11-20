@@ -12,7 +12,7 @@ All images support native `linux/amd64` and `linux/arm64` builds.
 | Image | Versioned tag | Moving tags | Adds |
 | --- | --- | --- | --- |
 | `ghcr.io/schjan/images/ci-base` | `node26-trixie` | `node-trixie` | Node/npm, Bash, Git, curl, CA certificates, jq, tar/gzip/xz/zstd, zip/unzip, Docker CLI and Buildx/Compose |
-| `ghcr.io/schjan/images/ci-rust` | `1.99.1-trixie` | `1-trixie` | Rust, rustfmt, Clippy, C/C++ build tools, CMake, pkg-config |
+| `ghcr.io/schjan/images/ci-rust` | `1.99.1-trixie` | `1-trixie` | Rust, rustfmt, Clippy, C/C++ build tools, CMake, pkg-config, mise |
 | `ghcr.io/schjan/images/ci-dotnet` | `10.0.403-trixie` | `10-trixie`, `10.0-trixie` | .NET 10 SDK, runtimes, and native dependencies from Microsoft's Debian 13 feed |
 
 The registry prefix follows the lowercase GitHub repository name. Versioned
@@ -43,6 +43,10 @@ updates both copies together:
   `DOTNET_SDK_PACKAGE_VERSION` pins use the exact APT package version
   (`10.0.403-1`), grouped into one .NET 10 SDK PR. Tracking the
   `dotnet-sdk-10.0` package keeps updates within .NET 10 rather than moving to 11.
+- **mise:** the `github-releases` datasource reads `jdx/mise` releases. A
+  custom manager tracks both `MISE_VERSION` pins in one PR. The image installs
+  only the mise binary, checked against the release's `SHASUMS256.txt`;
+  consumers pin their own tools in a `mise.toml` and run `mise install`.
 - **Node/Docker:** Renovate's Dockerfile manager tracks `base/Dockerfile`, and
   a custom manager tracks the corresponding Bake overrides. Without the latter,
   Bake would silently keep installing the old versions after a Dockerfile PR.
@@ -53,7 +57,8 @@ pin alignment, and safe publication of all aliases. Renovate does not automerge
 these updates.
 
 Environment variables override the Bake defaults: `NODE_IMAGE`, `DOCKER_IMAGE`,
-`RUST_VERSION`, `DOTNET_SDK_PACKAGE_VERSION`, `IMAGE_PREFIX`, and `PLATFORMS`.
+`RUST_VERSION`, `MISE_VERSION`, `DOTNET_SDK_PACKAGE_VERSION`, `IMAGE_PREFIX`,
+and `PLATFORMS`.
 Node/Docker references can include registry ports and digests. Tags are parsed
 from the final path component after stripping any digest, so registry ports
 never become version numbers. A tagged digest such as `node:26-trixie@sha256:…`
