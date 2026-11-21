@@ -15,7 +15,7 @@ variable "RUST_VERSION" {
 }
 
 variable "MISE_VERSION" {
-  default = "2026.11.10"
+  default = "2026.11.12"
 }
 
 variable "DOTNET_SDK_PACKAGE_VERSION" {
