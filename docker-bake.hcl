@@ -11,7 +11,7 @@ variable "DOCKER_IMAGE" {
 }
 
 variable "RUST_VERSION" {
-  default = "1.100.0"
+  default = "1.100.1"
 }
 
 variable "MISE_VERSION" {
